@@ -1,9 +1,12 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
+using AwsS3.Server.Dtos;
+using AwsS3.Server.Dtos.Requests;
+using AwsS3.Server.Dtos.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
-namespace AwsS3.Server
+namespace AwsS3.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -18,54 +21,108 @@ namespace AwsS3.Server
             _s3Settings = s3Settings.Value;
         }
 
-        // POST api/files
+
         [HttpPost]
+        [Consumes("multipart/form-data")]
         [DisableRequestSizeLimit]
-        public async Task<IActionResult> Upload([FromForm] IFormFile file)
+        public async Task<IActionResult> Upload([FromForm] UploadFilesRequest request)
         {
-            if (file.Length == 0)
-                return BadRequest("No file uploaded");
+            if (request.Files == null || request.Files.Count == 0)
+                return BadRequest("No files uploaded");
 
-            using var stream = file.OpenReadStream();
-            var key = Guid.NewGuid().ToString();
+            var results = new List<UploadFileResponse>();
 
-            var putRequest = new PutObjectRequest
+            foreach (var file in request.Files)
             {
-                BucketName = _s3Settings.BucketName,
-                Key = $"files/{key}",
-                InputStream = stream,
-                ContentType = file.ContentType
-            };
-            putRequest.Metadata["file-name"] = file.FileName;
+                if (file.Length == 0) continue;
 
-            await _s3Client.PutObjectAsync(putRequest);
+                var prefixNormalized = request.Prefix.Trim().TrimStart('/').TrimEnd('/');
+                var key = $"{prefixNormalized}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                var bucketName = request.BucketName ?? _s3Settings.BucketName;
 
-            return Ok(new { key, fileName = file.FileName });
+                using var stream = file.OpenReadStream();
+                var putRequest = new PutObjectRequest
+                {
+                    BucketName = bucketName,
+                    Key = key,
+                    InputStream = stream,
+                    ContentType = file.ContentType
+                };
+
+                putRequest.Metadata["file-name"] = file.FileName;
+
+                await _s3Client.PutObjectAsync(putRequest);
+
+                var fileUrl = $"https://{bucketName}.s3.amazonaws.com/{key}"; // hoặc CloudFront URL
+
+                results.Add(new UploadFileResponse
+                {
+                    Key = key,
+                    FileName = file.FileName,
+                    Url = fileUrl
+                });
+            }
+
+            return Ok(results);
         }
 
-        // GET api/files/{key}
-        [HttpGet("{key}")]
-        public async Task<IActionResult> GetFile(string key)
+
+
+        [HttpGet("{*key}")]
+        public async Task<IActionResult> Download(string key)
         {
+
+            key = Uri.UnescapeDataString(key); //giải mã %2F -> /
+
             var getRequest = new GetObjectRequest
             {
                 BucketName = _s3Settings.BucketName,
-                Key = $"files/{key}"
+                Key = key
             };
 
             var response = await _s3Client.GetObjectAsync(getRequest);
 
-            // AWS Metadata keys are case-insensitive, but stored in lowercase internally.
-            string fileName = response.Metadata["file-name"];
+            string originalFileName = response.Metadata["file-name"];
 
-            if (string.IsNullOrEmpty(fileName))
-            {
-                fileName = key;
-            }
-            return File(response.ResponseStream, response.Headers.ContentType, fileName);
+            return File(response.ResponseStream, response.Headers.ContentType, originalFileName, enableRangeProcessing: true);//support resume download
+
         }
 
-        // DELETE api/files/{key}
+
+        [HttpGet("list")]
+        public async Task<IActionResult> GetFiles([FromQuery] string folder)
+        {
+            var listRequest = new ListObjectsV2Request
+            {
+                BucketName = _s3Settings.BucketName,
+                Prefix = $"{folder}/", // lấy tất cả object bắt đầu với prefix này
+            };
+
+            var files = new List<object>();
+
+            ListObjectsV2Response listResponse;
+            do
+            {
+                listResponse = await _s3Client.ListObjectsV2Async(listRequest);
+
+                foreach (var s3Object in listResponse.S3Objects)
+                {
+                    files.Add(new
+                    {
+                        s3Object.Key,
+                        Url = $"https://{_s3Settings.BucketName}.s3.amazonaws.com/{s3Object.Key}",
+                        s3Object.Size,
+                        s3Object.LastModified
+                    });
+                }
+
+                listRequest.ContinuationToken = listResponse.NextContinuationToken;
+            }
+            while ((bool)listResponse.IsTruncated); // tiếp tục nếu còn nhiều trang
+
+            return Ok(files);
+        }
+
         [HttpDelete("{key}")]
         public async Task<IActionResult> DeleteFile(string key)
         {
@@ -78,8 +135,7 @@ namespace AwsS3.Server
             await _s3Client.DeleteObjectAsync(deleteRequest);
             return Ok($"File {key} deleted successfully");
         }
-
-        // GET api/files/{key}/presigned
+       // Hiển thị file (ảnh, PDF, video, v.v.)
         [HttpGet("{key}/presigned")]
         public IActionResult GetPresignedDownloadUrl(string key)
         {
@@ -102,7 +158,6 @@ namespace AwsS3.Server
             }
         }
 
-        // POST api/files/presigned
         [HttpPost("presigned")]
         public IActionResult CreatePresignedUploadUrl([FromForm] string fileName, [FromForm] string contentType)
         {
@@ -128,7 +183,6 @@ namespace AwsS3.Server
             }
         }
 
-        // POST api/files/start-multipart
         [HttpPost("start-multipart")]
         public async Task<IActionResult> StartMultipartUpload([FromForm] string fileName, [FromForm] string contentType)
         {
@@ -152,7 +206,6 @@ namespace AwsS3.Server
             }
         }
 
-        // POST api/files/{key}/presigned-part
         [HttpPost("{key}/presigned-part")]
         public IActionResult GetPresignedPartUrl(
             string key,
@@ -180,7 +233,6 @@ namespace AwsS3.Server
             }
         }
 
-        // POST api/files/{key}/complete-multipart
         [HttpPost("{key}/complete-multipart")]
         public async Task<IActionResult> CompleteMultipartUpload(string key, [FromBody] CompleteMultipartUpload complete)
         {

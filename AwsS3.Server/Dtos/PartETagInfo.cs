@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-namespace AwsS3.Server
+namespace AwsS3.Server.Dtos
 {
 
     public class PartETagInfo
