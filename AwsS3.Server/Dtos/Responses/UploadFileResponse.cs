@@ -2,8 +2,8 @@
 {
     public sealed record UploadFileResponse
     {
-        public string Key { get; init; }
-        public string FileName { get; init; }
-        public string Url { get; init; }
+        public string Key { get; init; }=default!;
+        public string FileName { get; init; } = default!;
+        public string PreSignedUrl { get; init; } = default!;
     }
 }
