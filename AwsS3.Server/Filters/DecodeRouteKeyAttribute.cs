@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.Filters;
 using System;
 using System.Web;
-namespace AwsS3.Server
+namespace AwsS3.Server.Filters
 {
 
     public class DecodeRouteKeyAttribute : ActionFilterAttribute

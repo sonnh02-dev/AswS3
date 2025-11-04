@@ -85,10 +85,10 @@ document.addEventListener("DOMContentLoaded", () => {
   //   { start: 209715200, end: 262144000 }  // Phần 3: 200MB → 250MB
   // ]
 
-  async function uploadPart(preSignedPartUrl, part) {
-    return fetch(preSignedPartUrl, {
+  async function uploadPart(preSignedUrl, partFile) {
+    return fetch(preSignedUrl, {
       method: "PUT",
-      body: part,
+      body: partFile,
     });
   }
   async function uploadParts() {
@@ -111,12 +111,12 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       try {
-        const { preSignedPartUrl } = await getUploadPartPreSignedUrl(
+        const { preSignedUrl } = await getUploadPartPreSignedUrl(
           uploadState.key,
           uploadState.uploadId,
           uploadState.currentPart + 1
         );
-        const uploadPartResponse = await uploadPart(preSignedPartUrl, partFile);
+        const uploadPartResponse = await uploadPart(preSignedUrl, partFile);
 
         if (uploadPartResponse.ok) {
           const etag = uploadPartResponse.headers.get("ETag");

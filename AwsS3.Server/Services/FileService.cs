@@ -1,5 +1,6 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
+using AwsS3.Server.Configuration;
 using AwsS3.Server.Dtos.Requests;
 using AwsS3.Server.Dtos.Responses;
 using AwsS3.Server.Utils;

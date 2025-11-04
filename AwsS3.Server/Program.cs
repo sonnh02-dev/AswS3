@@ -1,7 +1,8 @@
 ﻿using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
-using AwsS3.Server;
+using AwsS3.Server.Configuration;
+using AwsS3.Server.Filters;
 using AwsS3.Server.Middlewares;
 using AwsS3.Server.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,12 +11,17 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        // Chuyển tên property sang camelCase
-        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-    });
+builder.Services.AddControllers(options =>
+{
+    // Global action filter để tự decode route "key"
+    options.Filters.Add<DecodeRouteKeyAttribute>();
+})
+.AddJsonOptions(options =>
+{
+    // Chuyển property JSON sang camelCase
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
@@ -33,11 +39,6 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 builder.Services.AddScoped<IBucketService, BucketService>();
 builder.Services.AddScoped<IFileService, FileService>();
 
-// Register custom action filter to decode route keys
-//builder.Services.AddControllers(options =>
-//{
-//    options.Filters.Add<DecodeRouteKeyAttribute>();
-//});
 
 var app = builder.Build();
 

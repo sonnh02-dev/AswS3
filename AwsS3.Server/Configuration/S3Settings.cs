@@ -1,4 +1,4 @@
-﻿namespace AwsS3.Server
+﻿namespace AwsS3.Server.Configuration
 {
 
     public sealed class S3Settings

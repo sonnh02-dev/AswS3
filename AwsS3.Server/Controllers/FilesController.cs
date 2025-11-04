@@ -19,31 +19,12 @@ namespace AwsS3.Server.Controllers
         public async Task<IActionResult> UploadFiles([FromForm] UploadFilesRequest request)
             => Ok(await _fileService.UploadFilesAsync(request));
 
-
-
-        [HttpPost("initiate-parts-upload")]
-        public async Task<IActionResult> InitiatePartsUpload([FromBody] InitiatePartsUploadRequest request)
-        {
-            var result = await _fileService.InitiatePartsUploadAsync(request);
-            return Ok(result);
-        }
-
-
-        [HttpPost("{key}/upload-part-presigned-url")]
-        public IActionResult GetUploadPartPreSignedUrl(string key, [FromBody] GetUploadPartPreSignedUrlRequest request)
-
-            => Ok(new { url = _fileService.GetUploadPartPreSignedUrl(request with { Key= key }) });
-
-
-        [HttpPost("{key}/complete-parts-upload")]
-        public async Task<IActionResult> CompletePartsUpload(string key, [FromBody] CompletePartsUploadRequest request)
-            => Ok(new { key, location = await _fileService.CompletePartsUploadAsync(request with { Key = key }) });
-
+      
         [HttpGet("{key}/download")]
         public async Task<IActionResult> DownloadFileAsync(string key)
             => await _fileService.DownloadFileAsync(key);
 
-        [HttpGet("list")]
+        [HttpGet]
         public async Task<IActionResult> GetAllFiles([FromQuery] GetAllFilesRequest request)
             => Ok(await _fileService.GetAllFilesAsync(request));
 
@@ -61,5 +42,28 @@ namespace AwsS3.Server.Controllers
         //[HttpGet("{key}/download-presigned-url")]
         //public IActionResult CreatePresignedUploadUrl([FromQuery] GetDownloadPreSignedUrlRequest request)
         //    => Ok(new { downloadUrl = _fileService.GetDownloadPreSignedUrl(request) });
+
+
+
+        [HttpPost("initiate-parts-upload")]
+        public async Task<IActionResult> InitiatePartsUpload([FromBody] InitiatePartsUploadRequest request)
+        {
+            var result = await _fileService.InitiatePartsUploadAsync(request);
+            return Ok(result);
+        }
+
+
+
+        [HttpPost("{key}/upload-part-presigned-url")]
+        //[DecodeRouteKey]
+        public IActionResult GetUploadPartPreSignedUrl(string key, [FromBody] GetUploadPartPreSignedUrlRequest request)
+
+            => Ok(new { PreSignedUrl = _fileService.GetUploadPartPreSignedUrl(request with { Key = key }) });
+
+
+        [HttpPost("{key}/complete-parts-upload")]
+        public async Task<IActionResult> CompletePartsUpload(string key, [FromBody] CompletePartsUploadRequest request)
+            => Ok(new { key, location = await _fileService.CompletePartsUploadAsync(request with { Key = key }) });
+
     }
 }
