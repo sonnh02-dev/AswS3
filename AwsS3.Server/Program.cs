@@ -2,6 +2,7 @@
 using Amazon.Runtime;
 using Amazon.S3;
 using AwsS3.Server;
+using AwsS3.Server.Middlewares;
 using AwsS3.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -32,16 +33,30 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 builder.Services.AddScoped<IBucketService, BucketService>();
 builder.Services.AddScoped<IFileService, FileService>();
 
+// Register custom action filter to decode route keys
+//builder.Services.AddControllers(options =>
+//{
+//    options.Filters.Add<DecodeRouteKeyAttribute>();
+//});
+
 var app = builder.Build();
 
-// Enable Swagger and CORS in development
+app.UseRouting();
+
+app.UseCors(policy =>
+    policy.AllowAnyOrigin()
+          .AllowAnyMethod()
+          .AllowAnyHeader());
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+
+app.MapControllers();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 }
-
-app.MapControllers();
 
 app.Run();
