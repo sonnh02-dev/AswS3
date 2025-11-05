@@ -19,7 +19,7 @@ namespace AwsS3.Server.Controllers
         public async Task<IActionResult> UploadFiles([FromForm] UploadFilesRequest request)
             => Ok(await _fileService.UploadFilesAsync(request));
 
-      
+
         [HttpGet("{key}/download")]
         public async Task<IActionResult> DownloadFileAsync(string key)
             => await _fileService.DownloadFileAsync(key);
@@ -32,12 +32,12 @@ namespace AwsS3.Server.Controllers
         public async Task<IActionResult> Delete(string key)
         {
             await _fileService.DeleteFileAsync(key);
-            return Ok($"File {key} deleted successfully"); 
+            return Ok($"File {key} deleted successfully");
         }
 
         [HttpPost("upload-presigned-url")]
         public IActionResult GetUploadPreSignedUrl([FromBody] GetUploadPreSignedUrlRequest request)
-            => Ok( _fileService.GetUploadPreSignedUrl(request));
+            => Ok(_fileService.GetUploadPreSignedUrl(request));
 
         //[HttpGet("{key}/download-presigned-url")]
         //public IActionResult CreatePresignedUploadUrl([FromQuery] GetDownloadPreSignedUrlRequest request)
@@ -63,7 +63,7 @@ namespace AwsS3.Server.Controllers
 
         [HttpPost("{key}/complete-parts-upload")]
         public async Task<IActionResult> CompletePartsUpload(string key, [FromBody] CompletePartsUploadRequest request)
-            => Ok(new { key, location = await _fileService.CompletePartsUploadAsync(request with { Key = key }) });
+            => Ok(new { key, Location = await _fileService.CompletePartsUploadAsync(request with { Key = key }) });
 
     }
 }

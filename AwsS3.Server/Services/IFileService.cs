@@ -12,8 +12,8 @@ namespace AwsS3.Server.Services
         GetUploadPreSignedUrlResponse GetUploadPreSignedUrl(GetUploadPreSignedUrlRequest request);
         Task<List<UploadFileResponse>> UploadFilesAsync(UploadFilesRequest request);
         string GetDownloadPreSignedUrl(GetDownloadPreSignedUrlRequest request);
-        Task<FileStreamResult> DownloadFileAsync(string  key);
-        Task<List<S3ObjectResponse>> GetAllFilesAsync(GetAllFilesRequest request);
+        Task<FileStreamResult> DownloadFileAsync(string key);
+        Task<GetAllFilesResponse> GetAllFilesAsync(GetAllFilesRequest request);
         Task DeleteFileAsync(string key);
 
         // ============================================================

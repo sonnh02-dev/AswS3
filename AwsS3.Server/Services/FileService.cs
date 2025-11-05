@@ -165,13 +165,15 @@ namespace AwsS3.Server.Services
             };
         }
 
-        public async Task<List<S3ObjectResponse>> GetAllFilesAsync(GetAllFilesRequest request)
+        public async Task<GetAllFilesResponse> GetAllFilesAsync(GetAllFilesRequest request)
         {
             var listRequest = new ListObjectsV2Request
             {
                 BucketName = _bucketName,
                 Prefix = $"{S3PathHelper.NormalizePrefix(request.Prefix)}/",
-                ContinuationToken = request.ContinuationToken
+                ContinuationToken = request.ContinuationToken,
+                MaxKeys = request.MaxKeys ?? 10
+
             };
 
             var files = new List<S3ObjectResponse>();
@@ -211,7 +213,13 @@ namespace AwsS3.Server.Services
                 });
             }
 
-            return files;
+            return new GetAllFilesResponse
+
+            {
+                Files = files,
+                ContinuationToken = listResponse.NextContinuationToken,
+                IsTruncated = listResponse.IsTruncated
+            };
         }
 
         public async Task DeleteFileAsync(string key)
